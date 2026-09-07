@@ -1,0 +1,5 @@
+<Project>
+  <PropertyGroup>
+    <NuGetPackageRoot>$(USERPROFILE)\.nuget\packages\</NuGetPackageRoot>
+  </PropertyGroup>
+</Project>

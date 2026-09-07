@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RuleSet Name="LanzhuTool Minimum Rules" Description="Compatibility ruleset placeholder for legacy project builds." ToolsVersion="10.0">
+  <Rules AnalyzerId="Microsoft.Analyzers.ManagedCodeAnalysis" RuleNamespace="Microsoft.Rules.Managed">
+    <Rule Id="*" Action="None" />
+  </Rules>
+</RuleSet>
