@@ -307,12 +307,18 @@ namespace mp4box
 
         private void WorkingForm_Load(object sender, EventArgs e)
         {
-            // save commands into a batch file
+            // save commands into a batch file.
+            // cmd.exe decodes each batch line using the code page set by chcp,
+            // so we switch it to 65001 (UTF-8) and write the file as UTF-8
+            // (no BOM). This keeps every Unicode filename (Japanese, CJK-ext-B,
+            // ...) intact. The old ANSI approach (Encoding.GetEncoding(0), GBK on
+            // a Chinese system) could not represent characters outside the local
+            // codepage and rejected valid filenames with a round-trip check.
             batPath = System.IO.Path.Combine(
                 Environment.GetEnvironmentVariable("TEMP", EnvironmentVariableTarget.User),
                 "lanzhutool" + DateTime.Now.ToFileTimeUtc().ToString() + ".bat");
-            var encoder = Encoding.GetEncoding(0);
-            var sw = new System.IO.StreamWriter(batPath, false, encoder);
+            var sw = new System.IO.StreamWriter(batPath, false, new UTF8Encoding(false));
+            sw.WriteLine("@chcp 65001>nul");
             sw.WriteLine(Commands);
             sw.Close();
 
@@ -332,16 +338,9 @@ namespace mp4box
                 taskbarProgress.HrInit();
                 taskbarProgress.SetProgressState(this.Handle, TBPFLAG.TBPF_NORMAL);
             }
-            // validate the command string
-            if (Commands.Equals(encoder.GetString(encoder.GetBytes(Commands))))
-                bgworker.RunWorkerAsync();
-            else
-            {
-                MessageBox.Show("Path or filename contains invalid characters, please rename and retry."
-                    + Environment.NewLine +
-                    "路径或文件名含有不可识别的字符，请重命名后重试。");
-                this.Close();
-            }
+            // UTF-8 encodes every Unicode filename losslessly, so the previous
+            // ANSI-codepage round-trip restriction no longer applies. Start work.
+            bgworker.RunWorkerAsync();
             notifyIcon.Visible = true;
             MainForm main = (MainForm)this.Owner;
             workPath = main.workPath;
@@ -431,6 +430,10 @@ namespace mp4box
             UpdateWorkCountUI();
             CheckFileExist(batPath);
             var processInfo = new System.Diagnostics.ProcessStartInfo(batPath, "2>&1");
+            // The batch switches cmd.exe to code page 65001 (UTF-8), so decode its
+            // redirected output as UTF-8 too, otherwise non-ASCII log lines garble.
+            // (Scoped to this process only, via StandardOutputEncoding.)
+            processInfo.StandardOutputEncoding = new UTF8Encoding(false);
             processInfo.WorkingDirectory = System.IO.Directory.GetCurrentDirectory();
             processInfo.CreateNoWindow = true;
             processInfo.UseShellExecute = false;

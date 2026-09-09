@@ -52,6 +52,28 @@ namespace mp4box
         public bool trayMode = false;
         private XDocument xdoc;
 
+        /// <summary>
+        /// Encoding used for .bat scripts that are run by cmd.exe. Files are
+        /// saved as UTF-8 (no BOM) and cmd is switched to code page 65001 first
+        /// (see <see cref="WriteBatFile"/>), so every Unicode path (Japanese
+        /// filenames, CJK Extension-B, ...) survives the trip through the batch
+        /// file. Characters the local ANSI codepage (e.g. GBK) cannot hold used
+        /// to be mangled or rejected before this change.
+        /// </summary>
+        private static readonly Encoding batEncoding = new UTF8Encoding(false);
+
+        /// <summary>
+        /// Writes a .bat that cmd.exe will run. Prepends a line that switches
+        /// the code page to 65001 (UTF-8), then saves the content as UTF-8, so
+        /// cmd.exe decodes every following line (incl. Unicode file paths) as
+        /// UTF-8 regardless of the system locale.
+        /// </summary>
+        private static void WriteBatFile(string path, string content)
+        {
+            File.WriteAllText(path,
+                "@chcp 65001>nul" + Environment.NewLine + content, batEncoding);
+        }
+
         #region Private Members Declaration
 
         private StringBuilder avsBuilder = new StringBuilder(1000);
@@ -916,7 +938,7 @@ namespace mp4box
 
             mux = sb.ToString();
             batpath = workPath + "\\mux.bat";
-            File.WriteAllText(batpath, mux, Encoding.Default);
+            WriteBatFile(batpath, mux);
             LogRecord(mux);
             Process.Start(batpath);
         }
@@ -1008,7 +1030,7 @@ namespace mp4box
                 Path.GetFileNameWithoutExtension(namevideo) + suf + ext;
             aextract += Util.FormatPath(outfile);
             batpath = workPath + "\\" + av + "extract.bat";
-            File.WriteAllText(batpath, aextract, Encoding.Default);
+            WriteBatFile(batpath, aextract);
             LogRecord(aextract);
             Process.Start(batpath);
         }
@@ -1072,7 +1094,7 @@ namespace mp4box
                 FormatExtractor.Extract(workPath, namevideo)[streamIndex].Format;
             aextract += Util.FormatPath(outfile);
             batpath = workPath + "\\mkvextract.bat";
-            File.WriteAllText(batpath, aextract, Encoding.Default);
+            WriteBatFile(batpath, aextract);
             LogRecord(aextract);
             Process.Start(batpath);
         }
@@ -1767,7 +1789,7 @@ namespace mp4box
             {
                 mkvextract = workPath + "\\ mkvextract.exe tracks \"" + namevideo6 + "\" 1:video.h264 2:audio.aac";
                 batpath = workPath + "\\mkvextract.bat";
-                File.WriteAllText(batpath, mkvextract, Encoding.Default);
+                WriteBatFile(batpath, mkvextract);
                 Process.Start(batpath);
             }
         }
@@ -1824,7 +1846,7 @@ namespace mp4box
             {
                 mkvmerge = workPath + "\\mkvmerge.exe -o \"" + nameout6 + "\"   \"" + namevideo5 + "\"   \"" + nameaudio3 + "\"";
                 batpath = workPath + "\\mkvmerge.bat";
-                File.WriteAllText(batpath, mkvmerge, Encoding.Default);
+                WriteBatFile(batpath, mkvmerge);
                 Process.Start(batpath);
             }
         }
@@ -1877,7 +1899,7 @@ namespace mp4box
                 }
                 mkvmerge += "\r\ncmd";
                 batpath = workPath + "\\mkvmerge.bat";
-                File.WriteAllText(batpath, mkvmerge, Encoding.Default);
+                WriteBatFile(batpath, mkvmerge);
                 LogRecord(mkvmerge);
                 Process.Start(batpath);
             }
@@ -1929,7 +1951,7 @@ namespace mp4box
                 string mkvname = namevideo6.Remove(i);
                 mkvextract = "\"" + workPath + "\\mkvextract.exe\" tracks \"" + namevideo6 + "\" 1:\"" + mkvname + "_video.h264\" 2:\"" + mkvname + "_audio.aac\"";
                 batpath = workPath + "\\mkvextract.bat";
-                File.WriteAllText(batpath, mkvextract, Encoding.Default);
+                WriteBatFile(batpath, mkvextract);
                 Process.Start(batpath);
             }
         }
@@ -2278,7 +2300,7 @@ namespace mp4box
                 }
                 mux += "\r\ncmd";
                 batpath = workPath + "\\mux.bat";
-                File.WriteAllText(batpath, mux, Encoding.Default);
+                WriteBatFile(batpath, mux);
                 LogRecord(mux);
                 Process.Start(batpath);
             }
@@ -2705,7 +2727,7 @@ namespace mp4box
                     workPath, namevideo4, maskb.Text, maske.Text, nameout5) + Environment.NewLine + "cmd";
                 batpath = workPath + "\\clip.bat";
                 LogRecord(clip);
-                File.WriteAllText(batpath, clip, Encoding.Default);
+                WriteBatFile(batpath, clip);
                 Process.Start(batpath);
             }
         }
@@ -3694,7 +3716,7 @@ namespace mp4box
                 }
                 aac += "\r\ncmd";
                 batpath = workPath + "\\aac.bat";
-                File.WriteAllText(batpath, aac, Encoding.Default);
+                WriteBatFile(batpath, aac);
                 LogRecord(aac);
                 Process.Start(batpath);
             }
@@ -3738,7 +3760,7 @@ namespace mp4box
             else
             {
                 batpath = workPath + "\\aac.bat";
-                File.WriteAllText(batpath, audiobat(nameaudio2, nameout3), Encoding.Default);
+                WriteBatFile(batpath, audiobat(nameaudio2, nameout3));
                 LogRecord(audiobat(nameaudio2, nameout3));
                 Process.Start(batpath);
             }
@@ -4349,7 +4371,7 @@ namespace mp4box
             //mux += "del \"" + workPath + "\\video_noaudio.mp4\" \r\n";
             mux = "\"" + workPath + "\\ffmpeg.exe\" -y -i \"" + namevideo + "\" -i \"" + nameaudio + "\" -map 0:v -c:v copy -map 1:0 -c:a copy  \"" + txtout.Text + "\" \r\n";
             batpath = workPath + "\\mux.bat";
-            File.WriteAllText(batpath, mux, Encoding.Default);
+            WriteBatFile(batpath, mux);
             LogRecord(mux);
             Process.Start(batpath);
         }
@@ -4493,7 +4515,7 @@ namespace mp4box
                 }
                 */
                 batpath = Path.Combine(workPath, Path.GetRandomFileName() + ".bat");
-                File.WriteAllText(batpath, mux, Encoding.Default);
+                WriteBatFile(batpath, mux);
                 LogRecord(mux);
                 Process.Start(batpath);
             }
@@ -4672,7 +4694,7 @@ namespace mp4box
             mux += "del black.flv\r\n";
 
             batpath = Path.Combine(workPath, Path.GetRandomFileName() + ".bat");
-            File.WriteAllText(batpath, mux, Encoding.Default);
+            WriteBatFile(batpath, mux);
             LogRecord(mux);
             Process.Start(batpath);
         }
@@ -5255,7 +5277,7 @@ namespace mp4box
             }
             ffmpeg += "\r\ncmd";
             batpath = workPath + "\\concat.bat";
-            File.WriteAllText(batpath, ffmpeg, Encoding.Default);
+            WriteBatFile(batpath, ffmpeg);
             LogRecord(aac);
             Process.Start(batpath);
         }
@@ -5378,7 +5400,7 @@ namespace mp4box
                 clip = string.Format(@"""{0}\ffmpeg.exe"" -i ""{1}"" -vf ""transpose={2}"" -y ""{3}""",
                     workPath, namevideo4, TransposeComboBox.SelectedIndex, nameout5) + Environment.NewLine + "cmd";
                 batpath = workPath + "\\clip.bat";
-                File.WriteAllText(batpath, clip, Encoding.Default);
+                WriteBatFile(batpath, clip);
                 Process.Start(batpath);
             }
         }
